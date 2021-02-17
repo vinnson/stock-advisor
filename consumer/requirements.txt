@@ -1,0 +1,4 @@
+websocket-client==0.57.0
+pygments==2.8.0
+requests==2.25.1
+elasticsearch==7.11.0
