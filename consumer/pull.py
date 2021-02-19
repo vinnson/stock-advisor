@@ -3,28 +3,37 @@ import websocket
 import json
 import os
 import sys
+import time
+from celery import Celery
 from elasticsearch import Elasticsearch
 from datetime import datetime
 
+app = Celery('pull', broker='redis://'+ os.environ.get('REDIS_HOSTS') +':6379/0')
+@app.task
+def send_out(mid, message):
+    try:
+        es = Elasticsearch(
+            [os.environ.get('ELASTICSEARCH_HOSTS')],
+            port=9200
+        )
+        es.index(index='stock_advisor', id=mid, body=message)
+    except Exception as inst:
+        # print(type(inst))
+        # print(inst.args)
+        # print(inst)
+        time.sleep(10)
+        pass
+
 def on_message(ws, message):
-    es = Elasticsearch(
-        [os.environ.get('ELASTICSEARCH_HOSTS')],
-        port=9200
-    )
     parsed = json.loads(message)
     if "data" in parsed:
         for x in range(len(parsed["data"])):
             # print(parsed["data"][x])
+            dataid = int(str(parsed["data"][x]["t"]) + str(x))
             parsed["data"][x].pop("c", None)
             parsed["data"][x]["@timestamp"] = datetime.utcfromtimestamp(parsed["data"][x]["t"]/1000).isoformat()
-            try:
-                es.index(index='stock_advisor', id=int(str(parsed["data"][x]["t"]) + str(x)), body=parsed["data"][x])
-            except Exception as inst:
-                # print(type(inst))
-                # print(inst.args)
-                # print(inst)
-                pass
-
+            parsed["data"][x].pop("t", None)
+            send_out.delay(dataid, parsed["data"][x])
 
 def on_error(ws, error):
     print(error)
