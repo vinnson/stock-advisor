@@ -43,22 +43,22 @@ services:
     image: redis:6.0.10-alpine
   consumer:
     build: ./consumer
+    image: stock-advisor-base
     depends_on:
       - redis
     env_file:
       - ./.idea/consumer/variables.env
   worker1:
-    build: ./consumer
+    image: stock-advisor-base
     depends_on:
       - redis
     env_file:
       - ./.idea/consumer/variables.env
     entrypoint: ["celery", "-A", "pull", "worker", "--logfile=/dev/null"]
   worker2:
-    build: ./consumer
+    image: stock-advisor-base
     depends_on:
       - redis
     env_file:
       - ./.idea/consumer/variables.env
     entrypoint: ["celery", "-A", "pull", "worker", "--logfile=/dev/null"]
-    
