@@ -27,13 +27,18 @@ def send_out(mid, message):
 def on_message(ws, message):
     parsed = json.loads(message)
     if "data" in parsed:
-        for x in range(len(parsed["data"])):
-            # print(parsed["data"][x])
-            dataid = int(str(parsed["data"][x]["t"]) + str(x))
-            parsed["data"][x].pop("c", None)
-            parsed["data"][x]["@timestamp"] = datetime.utcfromtimestamp(parsed["data"][x]["t"]/1000).isoformat()
-            parsed["data"][x].pop("t", None)
-            send_out.delay(dataid, parsed["data"][x])
+        dataid = int(str(parsed["data"][0]["t"]))
+        parsed["@timestamp"] = datetime.utcfromtimestamp(parsed["data"][0]["t"]/1000).isoformat()
+        send_out.delay(dataid, parsed)
+
+        ## Split JSON Array
+        # for x in range(len(parsed["data"])):
+        #     # print(parsed["data"][x])
+        #     dataid = int(str(parsed["data"][x]["t"]) + str(x))
+        #     parsed["data"][x].pop("c", None)
+        #     parsed["data"][x]["@timestamp"] = datetime.utcfromtimestamp(parsed["data"][x]["t"]/1000).isoformat()
+        #     parsed["data"][x].pop("t", None)
+        #     send_out.delay(dataid, parsed["data"][x])
 
 def on_error(ws, error):
     print(error)
@@ -42,11 +47,11 @@ def on_close(ws):
     print("### closed ###")
 
 def on_open(ws):
-    ws.send('{"type":"subscribe","symbol":"NOK"}')
-    ws.send('{"type":"subscribe","symbol":"AMC"}')
-    ws.send('{"type":"subscribe","symbol":"GEVO"}')
+    # ws.send('{"type":"subscribe","symbol":"NOK"}')
+    # ws.send('{"type":"subscribe","symbol":"AMC"}')
+    # ws.send('{"type":"subscribe","symbol":"GEVO"}')
     # ws.send('{"type":"subscribe","symbol":"^GSPC"}')
-    # ws.send('{"type":"subscribe","symbol":"BINANCE:BTCUSDT"}')
+    ws.send('{"type":"subscribe","symbol":"BINANCE:BTCUSDT"}')
     # ws.send('{"type":"subscribe","symbol":"IC MARKETS:1"}')
 
 if __name__ == "__main__":
