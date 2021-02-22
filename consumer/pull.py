@@ -10,35 +10,30 @@ from datetime import datetime
 
 app = Celery('pull', broker='redis://'+ os.environ.get('REDIS_HOSTS') +':6379/0')
 @app.task
-def send_out(mid, message):
-    try:
-        es = Elasticsearch(
-            [os.environ.get('ELASTICSEARCH_HOSTS')],
-            port=9200
-        )
-        es.index(index='stock_advisor', id=mid, body=message)
-    except Exception as inst:
-        # print(type(inst))
-        # print(inst.args)
-        # print(inst)
-        time.sleep(10)
-        pass
+def send_out(parsed):
+    es = Elasticsearch(
+        [os.environ.get('ELASTICSEARCH_HOSTS')],
+        port=9200
+    )
+    for x in range(len(parsed["data"])):
+        dataid = int(str(parsed["data"][x]["t"]) + str(x))
+        parsed["data"][x].pop("c", None)
+        parsed["data"][x]["@timestamp"] = datetime.utcfromtimestamp(parsed["data"][x]["t"]/1000).isoformat()
+        parsed["data"][x].pop("t", None)
+        try:
+            es.index(index='stock_advisor', id=dataid, body=parsed["data"][x])
+        except Exception as inst:
+            print(type(inst))
+            print(inst.args)
+            print(inst)
+            time.sleep(10)
+            pass
 
 def on_message(ws, message):
     parsed = json.loads(message)
-    if "data" in parsed:
-        dataid = int(str(parsed["data"][0]["t"]))
-        parsed["@timestamp"] = datetime.utcfromtimestamp(parsed["data"][0]["t"]/1000).isoformat()
-        send_out.delay(dataid, parsed)
 
-        ## Split JSON Array
-        # for x in range(len(parsed["data"])):
-        #     # print(parsed["data"][x])
-        #     dataid = int(str(parsed["data"][x]["t"]) + str(x))
-        #     parsed["data"][x].pop("c", None)
-        #     parsed["data"][x]["@timestamp"] = datetime.utcfromtimestamp(parsed["data"][x]["t"]/1000).isoformat()
-        #     parsed["data"][x].pop("t", None)
-        #     send_out.delay(dataid, parsed["data"][x])
+    if "data" in parsed:
+        send_out.delay(parsed)
 
 def on_error(ws, error):
     print(error)
@@ -47,11 +42,11 @@ def on_close(ws):
     print("### closed ###")
 
 def on_open(ws):
-    # ws.send('{"type":"subscribe","symbol":"NOK"}')
-    # ws.send('{"type":"subscribe","symbol":"AMC"}')
-    # ws.send('{"type":"subscribe","symbol":"GEVO"}')
+    ws.send('{"type":"subscribe","symbol":"NOK"}')
+    ws.send('{"type":"subscribe","symbol":"AMC"}')
+    ws.send('{"type":"subscribe","symbol":"GEVO"}')
     # ws.send('{"type":"subscribe","symbol":"^GSPC"}')
-    ws.send('{"type":"subscribe","symbol":"BINANCE:BTCUSDT"}')
+    # ws.send('{"type":"subscribe","symbol":"BINANCE:BTCUSDT"}')
     # ws.send('{"type":"subscribe","symbol":"IC MARKETS:1"}')
 
 if __name__ == "__main__":
